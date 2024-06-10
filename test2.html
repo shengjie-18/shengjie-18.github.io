@@ -11,6 +11,7 @@
             margin: 0;
             padding: 20px;
         }
+        
         .container {
             max-width: 600px;
             margin: auto;
@@ -22,7 +23,7 @@
             margin-bottom: 20px;
         }
         .message-form input, .message-form textarea {
-            width: 100%;
+            width: 95%;
             padding: 10px;
             margin: 5px 0;
             border: 1px solid #ccc;
@@ -43,21 +44,41 @@
         .messages li {
             padding: 10px;
             border-bottom: 1px solid #ddd;
+            position: relative;
         }
         .delete-btn {
             float: right;
             color: #dc3545;
             cursor: pointer;
         }
+        .like-btn, .dislike-btn {
+            cursor: pointer;
+            color: #007bff;
+            margin-left: 10px;
+        }
+        .search-bar {
+            margin-bottom: 20px;
+        }
+        .search-bar input {
+            width: 95%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
+
     <div class="container">
+        <a href="https://www.nttu.edu.tw/"><img src="https://www.nttu.edu.tw/var/file/0/1000/img/337/NTTULOGO.png" width="200" height="200" alt="Sample Image"></a>
         <h1>留言板</h1>
         <div class="message-form">
-            <input type="text" id="name" placeholder="你的名字">
+            <input type="text" id="name" placeholder="你的名字 (可不填)">
             <textarea id="message" rows="4" placeholder="你的留言"></textarea>
             <button onclick="addMessage()">提交留言</button>
+        </div>
+        <div class="search-bar">
+            <input type="text" id="search" placeholder="搜索留言" oninput="searchMessages()">
         </div>
         <ul id="messageList" class="messages"></ul>
     </div>
@@ -67,36 +88,34 @@
             var savedMessages = JSON.parse(localStorage.getItem('messages')) || [];
             var messageList = document.getElementById('messageList');
             savedMessages.forEach(function(message) {
-                addMessageToList(message.name, message.content, message.time);
+                addMessageToList(message.name, message.content, message.time, message.likes, message.dislikes);
             });
         };
 
         function addMessage() {
-            var name = document.getElementById('name').value;
+            var name = document.getElementById('name').value || '匿名';
             var message = document.getElementById('message').value;
             var currentTime = new Date().toLocaleString();
-            if(name && message) {
-                var newMessage = { name: name, content: message, time: currentTime };
-                addMessageToList(name, message, currentTime);
+            if(message) {
+                var newMessage = { name: name, content: message, time: currentTime, likes: 0, dislikes: 0 };
+                addMessageToList(name, message, currentTime, 0, 0);
                 saveMessage(newMessage);
                 document.getElementById('name').value = '';
                 document.getElementById('message').value = '';
             } else {
-                alert('請填寫你的名字和留言');
+                alert('請填寫你的留言');
             }
         }
 
-        function addMessageToList(name, message, time) {
+        function addMessageToList(name, message, time, likes, dislikes) {
             var messageList = document.getElementById('messageList');
             var newMessage = document.createElement('li');
-            newMessage.textContent = name + ' (' + time + '): ' + message;
-            var deleteBtn = document.createElement('span');
-            deleteBtn.textContent = '刪除';
-            deleteBtn.className = 'delete-btn';
-            deleteBtn.onclick = function() {
-                deleteMessage(newMessage, time);
-            };
-            newMessage.appendChild(deleteBtn);
+            newMessage.innerHTML = `
+                ${name} (${time}): ${message} 
+                <span class="like-btn" onclick="likeMessage('${time}')">👍 ${likes}</span> 
+                <span class="dislike-btn" onclick="dislikeMessage('${time}')">👎 ${dislikes}</span>
+                <span class="delete-btn" onclick="deleteMessage(this, '${time}')">刪除</span>
+            `;
             messageList.appendChild(newMessage);
         }
 
@@ -113,7 +132,50 @@
                 return message.time !== time;
             });
             localStorage.setItem('messages', JSON.stringify(savedMessages));
-            messageList.removeChild(messageElement);
+            messageList.removeChild(messageElement.parentElement);
+        }
+
+        function likeMessage(time) {
+            var savedMessages = JSON.parse(localStorage.getItem('messages')) || [];
+            savedMessages.forEach(function(message) {
+                if (message.time === time) {
+                    message.likes++;
+                }
+            });
+            localStorage.setItem('messages', JSON.stringify(savedMessages));
+            updateMessages();
+        }
+
+        function dislikeMessage(time) {
+            var savedMessages = JSON.parse(localStorage.getItem('messages')) || [];
+            savedMessages.forEach(function(message) {
+                if (message.time === time) {
+                    message.dislikes++;
+                }
+            });
+            localStorage.setItem('messages', JSON.stringify(savedMessages));
+            updateMessages();
+        }
+
+        function updateMessages() {
+            var messageList = document.getElementById('messageList');
+            messageList.innerHTML = '';
+            var savedMessages = JSON.parse(localStorage.getItem('messages')) || [];
+            savedMessages.forEach(function(message) {
+                addMessageToList(message.name, message.content, message.time, message.likes, message.dislikes);
+            });
+        }
+
+        function searchMessages() {
+            var query = document.getElementById('search').value.toLowerCase();
+            var messageList = document.getElementById('messageList');
+            messageList.innerHTML = '';
+            var savedMessages = JSON.parse(localStorage.getItem('messages')) || [];
+            savedMessages.filter(function(message) {
+                return message.content.toLowerCase().includes(query) || message.name.toLowerCase().includes(query);
+            }).forEach(function(message) {
+                addMessageToList(message.name, message.content, message.time, message.likes, message.dislikes);
+            });
         }
     </script>
 </body>
